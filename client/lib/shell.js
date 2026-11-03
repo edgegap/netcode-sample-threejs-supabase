@@ -348,7 +348,7 @@ export async function runGame(def) {
     conn?.close();
     showMenu("Cancelled.");
   };
-  addEventListener("pagehide", () => searching?.abort());
+  // Closing the page mid-search cancels through backend.js (a keepalive request).
 
   showMenu();
   // ?server=wss://host:port connects straight to a deployment (e.g. one started by edgegap/deploy.mjs).

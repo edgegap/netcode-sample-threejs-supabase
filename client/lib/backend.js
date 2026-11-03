@@ -44,6 +44,23 @@ export async function connectBackend({ supabaseUrl, supabasePublishableKey }) {
     return data;
   };
 
+  /**
+   * Cancel when the page is closing. A normal invoke() is usually killed with the page, which
+   * leaves the search in the queue until it expires and can still start a server for nobody, so
+   * this sends a keepalive request the browser finishes after the page is gone.
+   */
+  const cancelOnExit = () => {
+    if (!sessionToken) return;
+    fetch(`${supabaseUrl}/functions/v1/matchmaking`, {
+      method: "POST",
+      keepalive: true,
+      headers: { "content-type": "application/json", authorization: `Bearer ${sessionToken}`, apikey: supabasePublishableKey },
+      body: JSON.stringify({ action: "cancel" }),
+    }).catch(() => {});
+  };
+  let sessionToken = session.access_token;
+  db.auth.onAuthStateChange((_event, s) => (sessionToken = s?.access_token ?? null));
+
   return {
     db,
     userId,
@@ -88,6 +105,7 @@ export async function connectBackend({ supabaseUrl, supabasePublishableKey }) {
       onStatus(MATCHMAKING_STATUS.SEARCHING);
       const cancel = () => matchmaking("cancel").catch(() => {});
       signal?.addEventListener("abort", cancel, { once: true });
+      addEventListener("pagehide", cancelOnExit);
       try {
         for (;;) {
           await new Promise((r) => setTimeout(r, 1500));
@@ -99,6 +117,7 @@ export async function connectBackend({ supabaseUrl, supabasePublishableKey }) {
         }
       } finally {
         signal?.removeEventListener("abort", cancel);
+        removeEventListener("pagehide", cancelOnExit);
       }
     },
   };
