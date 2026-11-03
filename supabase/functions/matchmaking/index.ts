@@ -2,7 +2,8 @@
 //
 //   POST {action: "join"}    -> queue the signed-in player, returns {status}
 //   POST {action: "status"}  -> {status, ticket_id?, url?} (both once HOST_ASSIGNED)
-//   POST {action: "cancel"}  -> leave the queue
+//   POST {action: "cancel"}  -> leave the queue: {status: "CANCELLED"}, or the current status if
+//                               the match was already formed (the matchmaker refuses then)
 //
 // The player must send their Supabase session (Authorization: Bearer <access token>). The
 // matchmaker URL and Auth Token stay in Supabase secrets, so only signed-in players can queue and
@@ -13,7 +14,7 @@
 //   POST   /groups                               {profile, attributes, is_ready} -> {group_id, member_id}
 //   GET    /groups/{group_id}/members/{member_id} -> {status, ticket_id, assignment: {ports: {gameport: {link}}}}
 //   (ticket_id stays null until the player is matched)
-//   DELETE /groups/{group_id}
+//   DELETE /groups/{group_id}                  (the player owns their group of one; 409 once matched)
 
 import { admin, corsHeaders, env, json } from "../_shared/supabase.ts";
 
@@ -51,10 +52,21 @@ async function openTicket(userId: string) {
   return data;
 }
 
-async function cancel(ticket: any) {
-  if (!ticket || ticket.connect_url || ["CANCELLED", "EXPIRED"].includes(ticket.status)) return;
-  await mm("DELETE", `/groups/${ticket.group_id}`);
-  await admin.from("tickets").update({ status: "CANCELLED" }).eq("id", ticket.id);
+/**
+ * Leave the queue. Returns the ticket's status afterwards: "CANCELLED" when the matchmaker let the
+ * player go, or what it is now when it refused because the match was already formed (a deployment
+ * is starting; the game server stops itself if this player never joins).
+ */
+async function cancel(ticket: any): Promise<string | null> {
+  if (!ticket) return null;
+  if (ticket.connect_url || ["CANCELLED", "EXPIRED"].includes(ticket.status)) return ticket.status;
+  const res = await mm("DELETE", `/groups/${ticket.group_id}`);
+  if (res.ok || res.status === 404) {
+    await admin.from("tickets").update({ status: "CANCELLED" }).eq("id", ticket.id);
+    return "CANCELLED";
+  }
+  console.warn(`cancel ${ticket.id}: matchmaker HTTP ${res.status} ${JSON.stringify(res.data)}`);
+  return ticket.status;
 }
 
 Deno.serve(async (req) => {
@@ -104,8 +116,7 @@ Deno.serve(async (req) => {
   }
 
   if (action === "cancel") {
-    await cancel(ticket);
-    return json({ status: "CANCELLED" });
+    return json({ status: await cancel(ticket) });
   }
 
   return json({ error: "action must be join, status or cancel" }, 400);

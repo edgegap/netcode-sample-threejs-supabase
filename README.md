@@ -182,9 +182,20 @@ Host the page anywhere static (GitHub Pages, Netlify, Vercel, Supabase Storage):
 
 - `join`: cancels the player's previous search, `POST /groups {profile: "sumo", is_ready: true}` on the Edgegap matchmaker (a solo player is a group of one) and stores the membership with the user in `public.tickets`.
 - `status`: `GET /groups/{group_id}/members/{member_id}`. The matchmaker fills in `ticket_id` only once the player is matched; the function saves it next to the user, and on `HOST_ASSIGNED` returns it with `wss://<fqdn>:<external port>`. An expired search returns `EXPIRED` and the page asks the player to try again.
-- `cancel`: `DELETE /groups/{group_id}`.
+- `cancel`: `DELETE /groups/{group_id}` (the player owns their group of one). Returns `CANCELLED`, or the current status when the matchmaker refuses because the match was already formed.
 
 The page polls `status` every 1.5 s.
+
+### Cancelling a search
+
+A search left in the queue can still be matched and start a deployment nobody joins, so the page cancels it in every way it can leave:
+- **Cancel** button: calls the function's `cancel`.
+- **Closing or leaving the page** mid-search: `pagehide` sends `cancel` as a `fetch(..., {keepalive: true})`, which the browser completes after the page is gone (a normal `functions.invoke()` dies with the page).
+- **Find match again**: `join` cancels the player's previous search first.
+
+Verified on 2026-11-03: after a cancel, and after closing the page mid-search, the matchmaker reports the membership `CANCELLED` and never matches it.
+
+What cancelling can't cover: a player whose match was already formed (`MATCH_FOUND`, server starting) when they left, or whose browser was killed without `pagehide`. The search then either expires (30 s, `ticket_expiration_period`) or gets a server; that server stops itself after `FIRST_JOIN_TIMEOUT_S` (120 s) if nobody joins, or plays on with the players who did come (with bots).
 
 ### The game server checks who joins
 
@@ -240,7 +251,8 @@ Anonymous sign-ins are rate-limited per IP (30 per hour by default, `[auth.rate_
 
 ## Going to production
 
-- Matchmaker: `inspect: false`, and raise `ticket_expiration_period` if queues get longer.
+- Matchmaker: `inspect: false`, and raise `ticket_expiration_period` if queues get longer (an abandoned search lives that long if its cancel never arrives).
+- Abandoned matches: lower `FIRST_JOIN_TIMEOUT_S` (e.g. 60) so a server whose players all left before joining stops sooner, and watch for deployments that end with `self-stop: nobody joined` in your logs.
 - Let players keep their account: link email or OAuth to the anonymous user.
 - Clean up old rows in `tickets` (e.g. a `pg_cron` job deleting unused tickets older than a day).
 - Ship server updates by pushing a new tag and pointing the app version at it, or with the [Edgegap deploy GitHub Action](https://github.com/edgegap/deploy-action).
