@@ -257,6 +257,10 @@ Anonymous sign-ins are rate-limited per IP (30 per hour by default, `[auth.rate_
 - Clean up old rows in `tickets` (e.g. a `pg_cron` job deleting unused tickets older than a day).
 - Ship server updates by pushing a new tag and pointing the app version at it, or with the [Edgegap deploy GitHub Action](https://github.com/edgegap/deploy-action).
 
+## Using a coding agent
+
+The `edgegap-supabase` skill in [Edgegap's agent skills](https://github.com/edgegap/llm-agent-skills) ships this sample's schema, Edge Functions, server and client changes as templates, and walks an agent through the same steps for your own game. The [Edgegap MCP server](https://github.com/edgegap/llm-mcp-server) (0.15.8 and later) serves it too.
+
 ## Links
 
 - Edgegap docs: [matchmaking](https://docs.edgegap.com/learn/matchmaking), [deployments](https://docs.edgegap.com/learn/orchestration/deployments)
