@@ -1,0 +1,25 @@
+{
+  "name": "netcode-sample-threejs-supabase",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A Three.js multiplayer browser game with Supabase (sign-in, profiles, leaderboard, matchmaking Edge Function) and Edgegap (one authoritative Node.js server per match).",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "web": "node tools/serve.mjs",
+    "dev": "node server/main.js",
+    "test": "node tools/test-local.mjs",
+    "e2e": "node tools/e2e.mjs"
+  },
+  "dependencies": {
+    "@edgegap/sdk": "1.1.0",
+    "jose": "6.2.15",
+    "ws": "8.18.3"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "2.118.0"
+  }
+}

@@ -1,0 +1,9 @@
+node_modules
+.git
+*.md
+client
+tools
+edgegap
+supabase
+docs
+.e2e
