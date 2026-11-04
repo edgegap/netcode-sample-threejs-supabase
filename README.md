@@ -1,5 +1,7 @@
 # Supabase + Edgegap: a multiplayer web game
 
+![Supabase and Edgegap multiplayer: a Three.js sumo brawler with Supabase accounts and leaderboard, and one Edgegap server per match.](docs/images/card.jpg)
+
 A complete browser multiplayer game where **[Supabase](https://supabase.com) is the backend** (player accounts, profiles, a live leaderboard, match history, matchmaking gateway) and **[Edgegap](https://edgegap.com) runs the game servers** (one authoritative Node.js server per match, started near the players by the Edgegap matchmaker, stopped when the match ends).
 
 The game is **Sumo Push** from [netcode-sample-threejs-minigames](https://github.com/edgegap/netcode-sample-threejs-minigames): a Three.js party brawler where up to 8 players shove each other off a shrinking ring. First to 3 rounds wins.
