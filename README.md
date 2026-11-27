@@ -95,7 +95,7 @@ You need a [Supabase account](https://supabase.com/dashboard) (the free plan is 
 
 ```bash
 npx supabase login
-npx supabase projects create edgegap-sumo --org-id <your-org-id> --region us-east-1
+npx supabase projects create edgegap-sumo --org-id <your-org-id> --region us-east-1 --db-password <a-strong-password>
 npx supabase link --project-ref <project-ref>
 npx supabase db push --remote
 npx supabase config push
@@ -154,7 +154,9 @@ Optional timers: `WAIT_SECONDS` (15), `COUNTDOWN_SECONDS` (3), `RESULTS_SECONDS`
 
 Edit [`edgegap/matchmaker-config.json`](edgegap/matchmaker-config.json): set `application.name` and `application.version` to yours. Dashboard → **Matchmaker** → **Create matchmaker** → upload it → **Create and Start**. Copy the **API URL** and **Auth Token**.
 
-The profile is free-for-all, 2 to 8 players, and lets a lone player in after 20 seconds (bots fill the ring). The browser never calls the matchmaker, so `allowed_cors_origins` doesn't need your page's origin.
+The profile (`sumo`) is free-for-all, 2 to 8 players, and lets a lone player in after 20 seconds (bots fill the ring). The browser never calls the matchmaker, so `allowed_cors_origins` doesn't need your page's origin.
+
+If your matchmaker already has a profile called `sumo` for another game, name this one differently in the config and set `EDGEGAP_MM_PROFILE=<your profile name>` as a Supabase secret in step 6.
 
 ### 6. Deploy the Edge Functions
 
@@ -249,6 +251,7 @@ Anonymous sign-ins are rate-limited per IP (30 per hour by default, `[auth.rate_
 | "Not signed in: ..." when connecting | The server's `SUPABASE_URL` doesn't match the page's project, or the token expired mid-session (reload the page). |
 | "Unknown matchmaker ticket" | `REQUIRE_TICKET=1` and the player joined without a ticket (e.g. `?server=` direct mode). |
 | Match played but leaderboard unchanged | Read the deployment logs (`supabase: report-match HTTP ...`). 403 = `GAME_SERVER_SECRET` differs between Edgegap and Supabase; 422 = a ticket was refused. |
+| Everything fails with a connection error, or the Supabase CLI says the project is `INACTIVE` | Free Supabase projects pause after a week without activity. Dashboard → your project → **Resume project**, wait until it is healthy, then retry. |
 | `wss://` fails, or connects only after a few seconds | TLS Upgrade must be on for `gameport`. A fresh deployment refuses connections for a few seconds; the client retries. |
 
 ## Going to production
